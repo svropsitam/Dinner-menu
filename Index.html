@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Меню їдальні</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,600&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #1b2420;
+    --bg-card: #1f2b25;
+    --ink: #f3efe4;
+    --ink-muted: #a9b3a5;
+    --accent-mustard: #d9a544;
+    --accent-sage: #8fa37e;
+    --line: rgba(243,239,228,0.12);
+    --danger: #c96a52;
+    --radius: 10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at top, rgba(217,165,68,0.06), transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Work Sans', sans-serif;
+    min-height:100vh;
+    padding-bottom:80px;
+  }
+  ::selection{ background:var(--accent-mustard); color:#1b2420; }
+
+  header{
+    padding:40px 24px 28px;
+    text-align:center;
+    border-bottom:1px solid var(--line);
+  }
+  header .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--accent-sage);
+    margin-bottom:10px;
+  }
+  header h1{
+    font-family:'Fraunces', serif;
+    font-weight:700;
+    font-size:clamp(32px, 6vw, 52px);
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  header .today{
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-weight:500;
+    color:var(--ink-muted);
+    margin-top:8px;
+    font-size:17px;
+  }
+
+  main{ max-width:1080px; margin:0 auto; padding:40px 20px; }
+  #menu-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
+    gap:28px;
+  }
+  .empty-state{
+    grid-column:1/-1;
+    text-align:center;
+    padding:60px 20px;
+    color:var(--ink-muted);
+    font-family:'JetBrains Mono', monospace;
+    font-size:14px;
+  }
+  .dish-card{
+    background:var(--bg-card);
+    border-radius:var(--radius);
+    overflow:hidden;
+    border:1px solid var(--line);
+    position:relative;
+    transform:rotate(var(--tilt, 0deg));
+    transition:transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+  }
+  .dish-card:hover{
+    transform:rotate(0deg) translateY(-3px);
+    border-color:rgba(217,165,68,0.4);
+    box-shadow:0 12px 28px rgba(0,0,0,0.35);
+  }
+  .dish-card .tab{
+    position:absolute; top:-8px; left:24px;
+    width:38px; height:16px;
+    background:var(--accent-mustard);
+    opacity:0.85; transform:rotate(-3deg); border-radius:2px;
+  }
+  .dish-card .photo-wrap{ width:100%; aspect-ratio:4/3; background:#141c18; overflow:hidden; }
+  .dish-card img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .dish-card .no-photo{
+    width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+    color:var(--ink-muted); font-family:'JetBrains Mono', monospace; font-size:12px;
+  }
+  .dish-card .body{ padding:16px 18px 18px; }
+  .dish-card h3{ font-family:'Fraunces', serif; font-weight:600; font-size:19px; margin:0 0 6px; }
+  .dish-card p{ margin:0; font-size:14px; line-height:1.5; color:var(--ink-muted); }
+  .dish-card .admin-delete{
+    margin-top:12px; background:none; border:1px solid rgba(201,106,82,0.4);
+    color:var(--danger); font-family:'JetBrains Mono', monospace; font-size:12px;
+    padding:6px 10px; border-radius:6px; cursor:pointer; transition:background .2s ease;
+  }
+  .dish-card .admin-delete:hover{ background:rgba(201,106,82,0.15); }
+
+  #admin-toggle{
+    position:fixed; bottom:22px; right:22px;
+    width:46px; height:46px; border-radius:50%;
+    background:var(--bg-card); border:1px solid var(--line); color:var(--ink-muted);
+    font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    z-index:1001; transition:color .2s, border-color .2s, transform .2s, bottom .2s;
+  }
+  #admin-toggle:hover{ color:var(--accent-mustard); border-color:var(--accent-mustard); transform:rotate(25deg); }
+  #admin-toggle.is-admin{ color:var(--accent-sage); border-color:var(--accent-sage); }
+
+  .modal-backdrop{
+    position:fixed; inset:0; background:rgba(10,14,11,0.72);
+    display:none; align-items:center; justify-content:center; z-index:100; padding:20px;
+  }
+  .modal-backdrop.open{ display:flex; }
+  .modal{
+    background:var(--bg-card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:28px; width:100%; max-width:340px;
+  }
+  .modal h2{ font-family:'Fraunces', serif; font-size:20px; margin:0 0 16px; }
+  .modal input[type="password"]{
+    width:100%; background:#141c18; border:1px solid var(--line); border-radius:6px;
+    padding:12px 14px; color:var(--ink); font-family:'JetBrains Mono', monospace;
+    font-size:16px; letter-spacing:0.1em;
+  }
+  .modal input:focus{ outline:2px solid var(--accent-mustard); outline-offset:1px; }
+  .error-msg{ color:var(--danger); font-size:12px; margin-top:10px; min-height:16px; line-height:1.4; word-break:break-word; }
+
+  .btn{
+    border:none; border-radius:6px; padding:11px 18px;
+    font-family:'Work Sans', sans-serif; font-weight:600; font-size:14px;
+    cursor:pointer; transition:filter .15s ease;
+  }
+  .btn:hover{ filter:brightness(1.1); }
+  .btn-primary{ background:var(--accent-mustard); color:#1b2420; }
+  .btn-ghost{ background:none; border:1px solid var(--line); color:var(--ink-muted); }
+  .modal-actions{ display:flex; gap:10px; margin-top:16px; }
+
+  #admin-panel{ display:none; max-width:1080px; margin:0 auto; padding:0 20px 20px; }
+  #admin-panel.open{ display:block; }
+  #admin-panel .panel-inner{
+    background:var(--bg-card); border:1px solid var(--accent-sage); border-radius:var(--radius);
+    padding:24px; margin-bottom:36px;
+  }
+  #admin-panel .panel-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  #admin-panel h2{ font-family:'Fraunces', serif; font-size:20px; margin:0; color:var(--accent-sage); }
+  #logout-btn{
+    background:none; border:none; color:var(--ink-muted); font-family:'JetBrains Mono', monospace;
+    font-size:12px; cursor:pointer; text-decoration:underline;
+  }
+
+  .panel-tabs{ display:flex; gap:18px; margin-bottom:18px; border-bottom:1px solid var(--line); }
+  .tab-btn{
+    background:none; border:none; color:var(--ink-muted); font-family:'JetBrains Mono', monospace;
+    font-size:12px; text-transform:uppercase; letter-spacing:0.06em;
+    padding:8px 2px 12px; cursor:pointer; border-bottom:2px solid transparent;
+  }
+  .tab-btn.active{ color:var(--accent-mustard); border-bottom-color:var(--accent-mustard); }
+  .tab-content{ display:none; }
+  .tab-content.active{ display:block; }
+
+  .form-row{ margin-bottom:14px; }
+  .form-row label{
+    display:block; font-family:'JetBrains Mono', monospace; font-size:11px;
+    text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-muted); margin-bottom:6px;
+  }
+  .form-row input[type="text"], .form-row textarea{
+    width:100%; background:#141c18; border:1px solid var(--line); border-radius:6px;
+    padding:10px 12px; color:var(--ink); font-family:'Work Sans', sans-serif; font-size:14px; resize:vertical;
+  }
+  .form-row input:focus, .form-row textarea:focus{ outline:2px solid var(--accent-mustard); outline-offset:1px; }
+
+  #photo-preview{ margin-top:10px; max-width:180px; border-radius:6px; display:none; border:1px solid var(--line); }
+  #photo-meta{ font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--ink-muted); margin-top:6px; }
+  #add-status, #settings-status{ font-size:13px; margin-top:12px; min-height:16px; }
+  #add-status.ok, #settings-status.ok{ color:var(--accent-sage); }
+  #add-status.err, #settings-status.err{ color:var(--danger); }
+
+  .settings-hint, .setup-hint{ color:var(--ink-muted); font-size:13px; line-height:1.5; margin-bottom:18px; }
+
+  .setup-overlay{
+    position:fixed; inset:0; background:var(--bg); z-index:200;
+    display:none; align-items:flex-start; justify-content:center; padding:60px 20px; overflow-y:auto;
+  }
+  .setup-overlay.open{ display:flex; }
+  .setup-card{
+    background:var(--bg-card); border:1px solid var(--accent-mustard); border-radius:var(--radius);
+    padding:32px; width:100%; max-width:460px;
+  }
+  .setup-card h2{ font-family:'Fraunces', serif; font-size:24px; margin:6px 0 4px; }
+
+  .date-nav{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    margin-top:20px; flex-wrap:wrap;
+  }
+  .date-nav-btn{
+    background:var(--bg-card); border:1px solid var(--line); color:var(--ink);
+    width:34px; height:34px; border-radius:50%; font-size:18px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .date-nav-btn:hover{ border-color:var(--accent-mustard); color:var(--accent-mustard); }
+  #date-picker{
+    background:var(--bg-card); border:1px solid var(--line); color:var(--ink);
+    border-radius:6px; padding:7px 10px; font-family:'JetBrains Mono', monospace;
+    font-size:13px; color-scheme:dark;
+  }
+  .date-today-btn{
+    background:none; border:1px solid var(--line); color:var(--ink-muted);
+    border-radius:6px; padding:7px 12px; font-size:12px; cursor:pointer;
+    font-family:'JetBrains Mono', monospace;
+  }
+  .date-today-btn:hover{ color:var(--accent-mustard); border-color:var(--accent-mustard); }
+
+  .meal-tabs{
+    display:flex; justify-content:center; gap:10px; margin-top:18px; flex-wrap:wrap;
+  }
+  .meal-tab{
+    background:none; border:1px solid var(--line); color:var(--ink-muted);
+    padding:9px 22px; border-radius:20px; font-family:'Work Sans', sans-serif;
+    font-weight:600; font-size:14px; cursor:pointer; transition:all .2s ease;
+  }
+  .meal-tab.active{ background:var(--accent-mustard); border-color:var(--accent-mustard); color:#1b2420; }
+  .meal-tab:hover:not(.active){ border-color:var(--accent-mustard); color:var(--accent-mustard); }
+
+  #header-lines{ margin-top:14px; }
+  #header-lines .header-line{
+    font-family:'Work Sans', sans-serif;
+    font-size:14px;
+    color:var(--ink-muted);
+    margin-top:6px;
+  }
+
+  .category-header{
+    grid-column: 1/-1;
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:22px;
+    color:var(--accent-mustard);
+    margin: 10px 0 -8px;
+    padding-bottom:8px;
+    border-bottom:1px solid var(--line);
+  }
+  .category-header:first-child{ margin-top:0; }
+
+  .category-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 0; border-bottom:1px solid var(--line); font-size:14px;
+  }
+  .category-row:last-child{ border-bottom:none; }
+
+  .gear-menu{
+    position:fixed; right:22px; bottom:78px;
+    background:var(--bg-card); border:1px solid var(--line); border-radius:8px;
+    padding:6px; display:none; flex-direction:column; gap:2px; z-index:1001; min-width:210px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.4);
+  }
+  .gear-menu.open{ display:flex; }
+  .gear-menu-item{
+    background:none; border:none; color:var(--ink); text-align:left;
+    padding:10px 12px; font-family:'Work Sans', sans-serif; font-size:13px;
+    border-radius:6px; cursor:pointer;
+  }
+  .gear-menu-item:hover{ background:rgba(255,255,255,0.06); }
+
+  #debug-bar{
+    position:fixed; left:0; right:0; bottom:0;
+    max-height:28vh; overflow-y:auto;
+    background:rgba(0,0,0,0.9);
+    color:#8fa37e;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    line-height:1.5;
+    padding:8px 44px 8px 12px;
+    white-space:pre-wrap;
+    word-break:break-all;
+    z-index:900;
+    border-top:1px solid var(--line);
+  }
+  #debug-bar.collapsed{ display:none; }
+  #debug-bar .err-line{ color:var(--danger); }
+  #debug-bar .ok-line{ color:var(--accent-sage); }
+
+  @media (prefers-reduced-motion: reduce){ .dish-card, #admin-toggle{ transition:none; } }
+</style>
+</head>
+<body>
+
+<div class="setup-overlay" id="setup-screen">
+  <div class="setup-card">
+    <div class="eyebrow">Перший запуск</div>
+    <h2>Підключення до бази даних</h2>
+    <p class="setup-hint">Встав дані свого проєкту Firebase (Project settings → Your apps → SDK setup). Після збереження програма одразу запрацює тут, і завантажиться готовий файл з уже вписаними даними — постав ним старий.</p>
+    <form id="setup-form">
+      <div class="form-row"><label for="setup-apiKey">API Key</label><input type="text" id="setup-apiKey" required></div>
+      <div class="form-row"><label for="setup-authDomain">Auth Domain</label><input type="text" id="setup-authDomain" required placeholder="проект.firebaseapp.com"></div>
+      <div class="form-row"><label for="setup-databaseURL">Database URL</label><input type="text" id="setup-databaseURL" required placeholder="https://проект-default-rtdb.europe-west1.firebasedatabase.app"></div>
+      <div class="form-row"><label for="setup-projectId">Project ID</label><input type="text" id="setup-projectId" required></div>
+      <div class="form-row"><label for="setup-storageBucket">Storage Bucket</label><input type="text" id="setup-storageBucket"></div>
+      <div class="form-row"><label for="setup-messagingSenderId">Messaging Sender ID</label><input type="text" id="setup-messagingSenderId"></div>
+      <div class="form-row"><label for="setup-appId">App ID</label><input type="text" id="setup-appId"></div>
+      <div class="error-msg" id="setup-error"></div>
+      <button type="submit" class="btn btn-primary">Зберегти й запустити</button>
+    </form>
+  </div>
+</div>
+
+<header>
+  <div class="eyebrow" id="site-eyebrow">Сьогоднішнє меню</div>
+  <h1 id="site-title">Їдальня</h1>
+  <div class="today" id="today-date"></div>
+  <div id="header-lines"></div>
+
+  <div class="date-nav">
+    <button id="date-prev" class="date-nav-btn" title="Попередній день">‹</button>
+    <input type="date" id="date-picker">
+    <button id="date-next" class="date-nav-btn" title="Наступний день">›</button>
+    <button id="date-today" class="date-today-btn">Сьогодні</button>
+  </div>
+
+  <div class="meal-tabs">
+    <button class="meal-tab" data-meal="breakfast">Сніданок</button>
+    <button class="meal-tab" data-meal="lunch">Обід</button>
+    <button class="meal-tab" data-meal="dinner">Вечеря</button>
+  </div>
+</header>
+
+<main>
+  <div id="menu-grid">
+    <div class="empty-state">Завантаження меню…</div>
+  </div>
+</main>
+
+<div id="admin-panel">
+  <div class="panel-inner">
+    <div class="panel-header">
+      <h2>Панель адміністратора</h2>
+      <button id="logout-btn">вийти</button>
+    </div>
+
+    <div class="panel-tabs">
+      <button class="tab-btn active" data-tab="menu-tab">Меню</button>
+      <button class="tab-btn" data-tab="categories-tab">Категорії</button>
+      <button class="tab-btn" data-tab="interface-tab">Інтерфейс</button>
+      <button class="tab-btn" data-tab="settings-tab">Налаштування</button>
+    </div>
+
+    <div id="menu-tab" class="tab-content active">
+      <form id="add-form">
+        <div class="form-row">
+          <label for="dish-name">Назва страви</label>
+          <input type="text" id="dish-name" required maxlength="60" placeholder="Наприклад: Борщ український">
+        </div>
+        <div class="form-row">
+          <label for="dish-desc">Опис</label>
+          <textarea id="dish-desc" rows="2" maxlength="200" placeholder="Короткий опис страви"></textarea>
+        </div>
+        <div class="form-row">
+          <label for="dish-date">Дата</label>
+          <input type="date" id="dish-date">
+        </div>
+        <div class="form-row">
+          <label for="dish-meal">Прийом їжі</label>
+          <select id="dish-meal">
+            <option value="breakfast">Сніданок</option>
+            <option value="lunch" selected>Обід</option>
+            <option value="dinner">Вечеря</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="dish-category">Категорія</label>
+          <select id="dish-category">
+            <option value="">Без категорії</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="dish-photo">Фото</label>
+          <input type="file" id="dish-photo" accept="image/*">
+          <img id="photo-preview" alt="Прев'ю фото">
+          <div id="photo-meta"></div>
+        </div>
+        <button type="submit" class="btn btn-primary">Додати страву</button>
+        <div id="add-status"></div>
+      </form>
+    </div>
+
+    <div id="categories-tab" class="tab-content">
+      <p class="settings-hint">Розділи меню (наприклад "Перші страви", "Напої"). З'являються як заголовки над стравами відповідної категорії.</p>
+      <form id="add-category-form">
+        <div class="form-row">
+          <label for="category-name">Назва розділу</label>
+          <input type="text" id="category-name" required maxlength="40" placeholder="Наприклад: Перші страви">
+        </div>
+        <button type="submit" class="btn btn-primary">Додати розділ</button>
+        <div id="category-status"></div>
+      </form>
+      <div id="categories-list" style="margin-top:20px;"></div>
+
+      <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--line);">
+        <p class="settings-hint">Дні, старіші за тиждень від сьогодні, автоматично видаляються щоразу, коли адмін заходить у панель (окремого сервера в програми немає, тож це найнадійніший момент для очищення). Можна й запустити вручну:</p>
+        <button type="button" class="btn btn-ghost" id="cleanup-btn">🗑 Очистити дні старші за тиждень</button>
+        <div id="cleanup-status"></div>
+      </div>
+    </div>
+
+    <div id="interface-tab" class="tab-content">
+      <p class="settings-hint">Тексти, які бачать відвідувачі зверху сторінки. Порожнє поле — повертає стандартний напис.</p>
+      <form id="interface-form">
+        <div class="form-row">
+          <label for="if-eyebrow">Маленький підпис зверху</label>
+          <input type="text" id="if-eyebrow" maxlength="40" placeholder="Сьогоднішнє меню">
+        </div>
+        <div class="form-row">
+          <label for="if-title">Великий заголовок</label>
+          <input type="text" id="if-title" maxlength="40" placeholder="Їдальня">
+        </div>
+        <button type="submit" class="btn btn-primary">Зберегти</button>
+        <div id="interface-status"></div>
+      </form>
+
+      <p class="settings-hint" style="margin-top:24px;">Додаткові рядки під датою (наприклад оголошення чи години роботи). Можна додати кілька, кожен окремим рядком.</p>
+      <form id="add-line-form">
+        <div class="form-row">
+          <label for="line-text">Текст рядка</label>
+          <input type="text" id="line-text" required maxlength="120" placeholder="Наприклад: Обід з 12:00 до 14:00">
+        </div>
+        <button type="submit" class="btn btn-primary">Додати рядок</button>
+        <div id="line-status"></div>
+      </form>
+      <div id="lines-list" style="margin-top:20px;"></div>
+    </div>
+
+    <div id="settings-tab" class="tab-content">
+      <p class="settings-hint">Дані підключення до бази. Зміниш і збережеш — одразу завантажиться оновлений файл з уже вписаними даними, а поточна вкладка попросить оновити сторінку, щоб застосувати нове підключення.</p>
+      <form id="settings-form">
+        <div class="form-row"><label for="cfg-apiKey">API Key</label><input type="text" id="cfg-apiKey"></div>
+        <div class="form-row"><label for="cfg-authDomain">Auth Domain</label><input type="text" id="cfg-authDomain"></div>
+        <div class="form-row"><label for="cfg-databaseURL">Database URL</label><input type="text" id="cfg-databaseURL"></div>
+        <div class="form-row"><label for="cfg-projectId">Project ID</label><input type="text" id="cfg-projectId"></div>
+        <div class="form-row"><label for="cfg-storageBucket">Storage Bucket</label><input type="text" id="cfg-storageBucket"></div>
+        <div class="form-row"><label for="cfg-messagingSenderId">Messaging Sender ID</label><input type="text" id="cfg-messagingSenderId"></div>
+        <div class="form-row"><label for="cfg-appId">App ID</label><input type="text" id="cfg-appId"></div>
+        <button type="submit" class="btn btn-primary">Зберегти та завантажити оновлений файл</button>
+        <div id="settings-status"></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<button id="admin-toggle" title="Вхід для адміністратора">⚙</button>
+
+<div class="modal-backdrop" id="login-modal">
+  <div class="modal">
+    <h2>Код адміністратора</h2>
+    <input type="password" id="admin-code" inputmode="numeric" placeholder="••••••" autocomplete="off">
+    <div class="error-msg" id="login-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancel-login">Скасувати</button>
+      <button class="btn btn-primary" id="submit-login">Увійти</button>
+    </div>
+  </div>
+</div>
+
+<div id="debug-bar" class="collapsed"></div>
+
+<div class="gear-menu" id="gear-menu">
+  <button class="gear-menu-item" id="gear-admin-btn">🔐 Вхід адміністратора</button>
+  <button class="gear-menu-item" id="gear-debug-btn">🐞 Дебаг-консоль: увімкнути</button>
+</div>
+
+<script>
+  // Знімок початкового HTML сторінки — до будь-яких змін DOM.
+  // Саме ця "чиста" версія використовується кнопкою експорту нижче.
+  const PAGE_TEMPLATE = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+
+  const PLACEHOLDER_KEY = "ТВІЙ_API_KEY";
+  const ADMIN_EMAIL = "admin@internal.local";
+
+  let firebaseConfig = {
+    apiKey: "AIzaSyBdaHpOpySqofm9iv5BMk4c_COj8XkHwzU",
+    authDomain: "dinnermenu-51a0a.firebaseapp.com",
+    databaseURL: "https://dinnermenu-51a0a-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "dinnermenu-51a0a",
+    storageBucket: "dinnermenu-51a0a.firebasestorage.app",
+    messagingSenderId: "1056267662124",
+    appId: "1:1056267662124:web:1978570af2b6c11ef83289"
+  };
+
+  // Якщо в цій вкладці вже зберігали конфіг раніше (без переекспорту файлу) — підхопити його.
+  try {
+    const saved = localStorage.getItem('dinnerMenuFirebaseConfig');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.apiKey) firebaseConfig = parsed;
+    }
+  } catch (e) {}
+
+  function isConfigured(cfg){
+    return !!(cfg && cfg.apiKey && cfg.apiKey !== PLACEHOLDER_KEY && cfg.databaseURL);
+  }
+
+  function debugLog(msg, cls){
+    const bar = document.getElementById('debug-bar');
+    const line = document.createElement('div');
+    if (cls) line.className = cls;
+    const time = new Date().toLocaleTimeString('uk-UA');
+    line.textContent = '[' + time + '] ' + msg;
+    bar.appendChild(line);
+    bar.scrollTop = bar.scrollHeight;
+  }
+
+  debugLog('Активний Database URL: ' + firebaseConfig.databaseURL);
+  debugLog('Активний Project ID: ' + firebaseConfig.projectId);
+
+  const debugBarEl = document.getElementById('debug-bar');
+
+  // Пряма перевірка доступності бази в обхід Firebase SDK —
+  // якщо це відповість "OK", значить сама адреса й інтернет робочі,
+  // і проблема саме в Auth (наприклад, IndexedDB/сховище заблоковане на content:// сторінці).
+  fetch(firebaseConfig.databaseURL + '/menu.json')
+    .then(r => r.text())
+    .then(text => {
+      debugLog('Пінг /menu: OK, відповідь → ' + text.slice(0, 200), 'ok-line');
+    })
+    .catch(err => {
+      debugLog('Пінг /menu: ПОМИЛКА → ' + err.message, 'err-line');
+    });
+
+  function escapeJs(str){
+    return String(str || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  }
+
+  function buildConfigBlock(cfg){
+    return 'let firebaseConfig = {\n' +
+      '    apiKey: "' + escapeJs(cfg.apiKey) + '",\n' +
+      '    authDomain: "' + escapeJs(cfg.authDomain) + '",\n' +
+      '    databaseURL: "' + escapeJs(cfg.databaseURL) + '",\n' +
+      '    projectId: "' + escapeJs(cfg.projectId) + '",\n' +
+      '    storageBucket: "' + escapeJs(cfg.storageBucket) + '",\n' +
+      '    messagingSenderId: "' + escapeJs(cfg.messagingSenderId) + '",\n' +
+      '    appId: "' + escapeJs(cfg.appId) + '"\n' +
+      '  };';
+  }
+
+  function downloadConfiguredFile(cfg){
+    const html = PAGE_TEMPLATE.replace(/let firebaseConfig = \{[\s\S]*?\};/, buildConfigBlock(cfg));
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'dinner-menu.html';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function readConfigFromInputs(prefix){
+    return {
+      apiKey: document.getElementById(prefix + '-apiKey').value.trim(),
+      authDomain: document.getElementById(prefix + '-authDomain').value.trim(),
+      databaseURL: document.getElementById(prefix + '-databaseURL').value.trim(),
+      projectId: document.getElementById(prefix + '-projectId').value.trim(),
+      storageBucket: document.getElementById(prefix + '-storageBucket').value.trim(),
+      messagingSenderId: document.getElementById(prefix + '-messagingSenderId').value.trim(),
+      appId: document.getElementById(prefix + '-appId').value.trim()
+    };
+  }
+
+  function fillInputs(prefix, cfg){
+    const map = ['apiKey','authDomain','databaseURL','projectId','storageBucket','messagingSenderId','appId'];
+    map.forEach(k => {
+      const el = document.getElementById(prefix + '-' + k);
+      const val = cfg[k] || '';
+      el.value = val.indexOf('ТВІЙ') === 0 || val === PLACEHOLDER_KEY ? '' : val;
+    });
+  }
+
+  function showStatus(el, text, isErr){
+    el.textContent = text;
+    el.className = isErr ? 'err' : 'ok';
+    setTimeout(() => { el.textContent = ''; el.className = ''; }, 5000);
+  }
+
+  // ---------- екран першого налаштування ----------
+  const setupScreen = document.getElementById('setup-screen');
+  const setupForm = document.getElementById('setup-form');
+  const setupError = document.getElementById('setup-error');
+
+  setupForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const cfg = readConfigFromInputs('setup');
+    if (!cfg.apiKey || !cfg.databaseURL || !cfg.projectId) {
+      setupError.textContent = 'Заповни принаймні API Key, Database URL і Project ID';
+      return;
+    }
+    localStorage.setItem('dinnerMenuFirebaseConfig', JSON.stringify(cfg));
+    firebaseConfig = cfg;
+    downloadConfiguredFile(cfg);
+    setupScreen.classList.remove('open');
+    startApp();
+  });
+
+  if (!isConfigured(firebaseConfig)) {
+    setupScreen.classList.add('open');
+  } else {
+    startApp();
+  }
+
+  // ---------- застосунок працює через прямі REST-запити до Firebase ----------
+  // Без Firebase SDK і без WebSocket — лише fetch(), той самий спосіб,
+  // що вже підтверджений робочим у дебаг-пінгу.
+  function startApp(){
+    debugLog('Запуск застосунку (REST-режим, без WebSocket)');
+
+    let isAdmin = false;
+    let idToken = null;
+
+    function toISODate(d){
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return yyyy + '-' + mm + '-' + dd;
+    }
+
+    function defaultMealForNow(){
+      const h = new Date().getHours();
+      if (h < 11) return 'breakfast';
+      if (h < 16) return 'lunch';
+      return 'dinner';
+    }
+
+    let selectedDate = toISODate(new Date());
+    let selectedMeal = defaultMealForNow();
+    let dayDataCache = null;
+    let categoriesCache = null;
+
+    function formatDateLabel(dateStr){
+      const d = new Date(dateStr + 'T00:00:00');
+      return d.toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' });
+    }
+
+    function updateDateLabel(){
+      document.getElementById('today-date').textContent = formatDateLabel(selectedDate);
+    }
+
+    function syncAdminDishDefaults(){
+      const dishDateInput = document.getElementById('dish-date');
+      if (dishDateInput) dishDateInput.value = selectedDate;
+      const dishMealSelect = document.getElementById('dish-meal');
+      if (dishMealSelect) dishMealSelect.value = selectedMeal;
+    }
+
+    updateDateLabel();
+
+    let currentSettings = { title: 'Їдальня', eyebrow: 'Сьогоднішнє меню' };
+
+    function applySettings(data){
+      currentSettings = {
+        title: (data && data.title) ? data.title : 'Їдальня',
+        eyebrow: (data && data.eyebrow) ? data.eyebrow : 'Сьогоднішнє меню'
+      };
+      document.getElementById('site-title').textContent = currentSettings.title;
+      document.getElementById('site-eyebrow').textContent = currentSettings.eyebrow;
+      document.title = currentSettings.title;
+    }
+
+    function loadSettings(){
+      return fetch(firebaseConfig.databaseURL + '/settings.json')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => applySettings(data))
+        .catch(err => debugLog('Помилка завантаження налаштувань інтерфейсу: ' + err.message, 'err-line'));
+    }
+
+    loadSettings();
+
+    function renderHeaderLines(data, isAdminView){
+      const list = data
+        ? Object.keys(data)
+            .map(id => Object.assign({ id: id }, data[id]))
+            .sort((a, b) => (a.order || 0) - (b.order || 0))
+        : [];
+
+      const publicEl = document.getElementById('header-lines');
+      publicEl.innerHTML = list.map(l => '<div class="header-line">' + escapeHtml(l.text) + '</div>').join('');
+
+      const adminEl = document.getElementById('lines-list');
+      if (!adminEl) return;
+      if (list.length === 0) {
+        adminEl.innerHTML = '<div class="empty-state" style="padding:16px 0;">Рядків ще немає</div>';
+        return;
+      }
+      adminEl.innerHTML = '';
+      list.forEach(line => {
+        const row = document.createElement('div');
+        row.className = 'category-row';
+        row.innerHTML =
+          '<span>' + escapeHtml(line.text) + '</span>' +
+          '<button type="button" class="admin-delete" data-lineid="' + line.id + '">Видалити</button>';
+        adminEl.appendChild(row);
+      });
+      adminEl.querySelectorAll('[data-lineid]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (confirm('Видалити цей рядок?')) deleteHeaderLine(btn.dataset.lineid);
+        });
+      });
+    }
+
+    function loadHeaderLines(){
+      return fetch(firebaseConfig.databaseURL + '/headerLines.json')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => renderHeaderLines(data))
+        .catch(err => debugLog('Помилка завантаження рядків шапки: ' + err.message, 'err-line'));
+    }
+
+    function deleteHeaderLine(id){
+      fetch(firebaseConfig.databaseURL + '/headerLines/' + id + '.json?auth=' + encodeURIComponent(idToken), {
+        method: 'DELETE'
+      })
+        .then(() => loadHeaderLines())
+        .catch(err => debugLog('Помилка видалення рядка: ' + err.message, 'err-line'));
+    }
+
+    loadHeaderLines();
+
+    const grid = document.getElementById('menu-grid');
+
+    function escapeHtml(str){
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function renderMenuData(menuData, categoriesData){
+      grid.innerHTML = '';
+      const dishKeys = menuData ? Object.keys(menuData) : [];
+      if (dishKeys.length === 0) {
+        grid.innerHTML = '<div class="empty-state">Меню поки порожнє</div>';
+        return;
+      }
+
+      const catList = categoriesData
+        ? Object.keys(categoriesData)
+            .map(id => Object.assign({ id: id }, categoriesData[id]))
+            .sort((a, b) => (a.order || 0) - (b.order || 0))
+        : [];
+      const catIds = catList.map(c => c.id);
+
+      const tilts = [-1.2, 0.8, -0.5, 1.3, -0.9, 0.6];
+      let tiltIndex = 0;
+
+      function renderDishCard(id, dish){
+        const card = document.createElement('div');
+        card.className = 'dish-card';
+        card.style.setProperty('--tilt', tilts[tiltIndex % tilts.length] + 'deg');
+        tiltIndex++;
+        const photoHtml = dish.photo
+          ? '<img src="' + dish.photo + '" alt="' + escapeHtml(dish.name) + '">'
+          : '<div class="no-photo">без фото</div>';
+        card.innerHTML =
+          '<div class="tab"></div>' +
+          '<div class="photo-wrap">' + photoHtml + '</div>' +
+          '<div class="body">' +
+            '<h3>' + escapeHtml(dish.name) + '</h3>' +
+            '<p>' + escapeHtml(dish.description || '') + '</p>' +
+            (isAdmin ? '<button class="admin-delete" data-id="' + id + '">Видалити</button>' : '') +
+          '</div>';
+        grid.appendChild(card);
+      }
+
+      catList.forEach(cat => {
+        const dishesInCat = dishKeys.filter(k => menuData[k].categoryId === cat.id);
+        if (dishesInCat.length === 0) return;
+        const header = document.createElement('div');
+        header.className = 'category-header';
+        header.textContent = cat.name;
+        grid.appendChild(header);
+        dishesInCat.forEach(id => renderDishCard(id, menuData[id]));
+      });
+
+      const uncategorized = dishKeys.filter(k => !menuData[k].categoryId || catIds.indexOf(menuData[k].categoryId) === -1);
+      if (uncategorized.length > 0) {
+        if (catList.length > 0) {
+          const header = document.createElement('div');
+          header.className = 'category-header';
+          header.textContent = 'Інше';
+          grid.appendChild(header);
+        }
+        uncategorized.forEach(id => renderDishCard(id, menuData[id]));
+      }
+
+      if (isAdmin) {
+        grid.querySelectorAll('.admin-delete').forEach(btn => {
+          btn.addEventListener('click', () => {
+            if (confirm('Видалити цю страву з меню?')) deleteDish(btn.dataset.id);
+          });
+        });
+      }
+    }
+
+    function populateCategorySelect(categoriesData){
+      const select = document.getElementById('dish-category');
+      const current = select.value;
+      const list = categoriesData
+        ? Object.keys(categoriesData)
+            .map(id => Object.assign({ id: id }, categoriesData[id]))
+            .sort((a, b) => (a.order || 0) - (b.order || 0))
+        : [];
+
+      select.innerHTML = '<option value="">Без категорії</option>';
+      list.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat.id;
+        opt.textContent = cat.name;
+        select.appendChild(opt);
+      });
+      const stillExists = Array.prototype.some.call(select.options, o => o.value === current);
+      if (stillExists) select.value = current;
+
+      const catListEl = document.getElementById('categories-list');
+      catListEl.innerHTML = '';
+      if (list.length === 0) {
+        catListEl.innerHTML = '<div class="empty-state" style="padding:16px 0;">Розділів ще немає</div>';
+      } else {
+        list.forEach(cat => {
+          const row = document.createElement('div');
+          row.className = 'category-row';
+          row.innerHTML =
+            '<span>' + escapeHtml(cat.name) + '</span>' +
+            '<button type="button" class="admin-delete" data-catid="' + cat.id + '">Видалити</button>';
+          catListEl.appendChild(row);
+        });
+        catListEl.querySelectorAll('[data-catid]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            if (confirm('Видалити цей розділ? Страви лишаться, просто без категорії.')) {
+              deleteCategory(btn.dataset.catid);
+            }
+          });
+        });
+      }
+    }
+
+    function renderCurrentMeal(){
+      const mealData = dayDataCache ? dayDataCache[selectedMeal] : null;
+      renderMenuData(mealData, categoriesCache);
+    }
+
+    function loadMenu(){
+      return Promise.all([
+        fetch(firebaseConfig.databaseURL + '/menu/' + selectedDate + '.json').then(r => {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        }),
+        fetch(firebaseConfig.databaseURL + '/categories.json').then(r => r.ok ? r.json() : null)
+          .catch(() => null)
+      ])
+        .then(results => {
+          dayDataCache = results[0] || {};
+          categoriesCache = results[1];
+          populateCategorySelect(categoriesCache);
+          renderCurrentMeal();
+        })
+        .catch(err => {
+          debugLog('Помилка завантаження меню: ' + err.message, 'err-line');
+          grid.innerHTML = '<div class="empty-state">Помилка завантаження: ' + err.message + '</div>';
+        });
+    }
+
+    // ---------- навігація по датах і прийомах їжі ----------
+    const datePicker = document.getElementById('date-picker');
+    datePicker.value = selectedDate;
+    document.querySelectorAll('.meal-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.meal === selectedMeal);
+    });
+    syncAdminDishDefaults();
+
+    function shiftDate(days){
+      const d = new Date(selectedDate + 'T00:00:00');
+      d.setDate(d.getDate() + days);
+      selectedDate = toISODate(d);
+      datePicker.value = selectedDate;
+      updateDateLabel();
+      syncAdminDishDefaults();
+      loadMenu();
+    }
+
+    document.getElementById('date-prev').addEventListener('click', () => shiftDate(-1));
+    document.getElementById('date-next').addEventListener('click', () => shiftDate(1));
+    document.getElementById('date-today').addEventListener('click', () => {
+      selectedDate = toISODate(new Date());
+      datePicker.value = selectedDate;
+      updateDateLabel();
+      syncAdminDishDefaults();
+      loadMenu();
+    });
+    datePicker.addEventListener('change', () => {
+      if (!datePicker.value) return;
+      selectedDate = datePicker.value;
+      updateDateLabel();
+      syncAdminDishDefaults();
+      loadMenu();
+    });
+
+    document.querySelectorAll('.meal-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedMeal = btn.dataset.meal;
+        document.querySelectorAll('.meal-tab').forEach(b => b.classList.toggle('active', b === btn));
+        syncAdminDishDefaults();
+        renderCurrentMeal();
+      });
+    });
+
+    loadMenu();
+    // Живого WebSocket немає, тож підтягуємо оновлення періодично.
+    setInterval(loadMenu, 8000);
+
+    function deleteDish(id){
+      fetch(firebaseConfig.databaseURL + '/menu/' + selectedDate + '/' + selectedMeal + '/' + id + '.json?auth=' + encodeURIComponent(idToken), {
+        method: 'DELETE'
+      })
+        .then(() => loadMenu())
+        .catch(err => debugLog('Помилка видалення: ' + err.message, 'err-line'));
+    }
+
+    function deleteCategory(id){
+      fetch(firebaseConfig.databaseURL + '/categories/' + id + '.json?auth=' + encodeURIComponent(idToken), {
+        method: 'DELETE'
+      })
+        .then(() => loadMenu())
+        .catch(err => debugLog('Помилка видалення категорії: ' + err.message, 'err-line'));
+    }
+
+    // ---------- очищення старого архіву (дні старші за тиждень) ----------
+    function cleanupOldDates(onDone){
+      if (!idToken) { if (onDone) onDone(null, 'Спочатку увійди як адмін'); return; }
+      fetch(firebaseConfig.databaseURL + '/menu.json?auth=' + encodeURIComponent(idToken))
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (!data) { debugLog('Архів: даних немає'); if (onDone) onDone(0); return; }
+          const cutoff = new Date();
+          cutoff.setDate(cutoff.getDate() - 7);
+          const cutoffStr = toISODate(cutoff);
+          const oldDates = Object.keys(data).filter(d => d < cutoffStr);
+          if (oldDates.length === 0) {
+            debugLog('Архів: старих днів для видалення немає');
+            if (onDone) onDone(0);
+            return;
+          }
+          debugLog('Архів: видаляю ' + oldDates.length + ' стар(их) днів → ' + oldDates.join(', '));
+          Promise.all(oldDates.map(d =>
+            fetch(firebaseConfig.databaseURL + '/menu/' + d + '.json?auth=' + encodeURIComponent(idToken), { method: 'DELETE' })
+          ))
+            .then(() => {
+              debugLog('Архів: очищення завершено', 'ok-line');
+              if (onDone) onDone(oldDates.length);
+            })
+            .catch(err => {
+              debugLog('Архів: помилка очищення — ' + err.message, 'err-line');
+              if (onDone) onDone(null, err.message);
+            });
+        })
+        .catch(err => {
+          debugLog('Архів: не вдалось перевірити старі дні — ' + err.message, 'err-line');
+          if (onDone) onDone(null, err.message);
+        });
+    }
+
+    const cleanupStatus = document.getElementById('cleanup-status');
+    document.getElementById('cleanup-btn').addEventListener('click', () => {
+      showStatus(cleanupStatus, 'Перевіряю…', false);
+      cleanupOldDates((count, err) => {
+        if (err) showStatus(cleanupStatus, 'Помилка: ' + err, true);
+        else showStatus(cleanupStatus, count > 0 ? ('Видалено днів: ' + count) : 'Старих днів немає', false);
+      });
+    });
+
+    // ---------- вхід адміна ----------
+    const adminToggle = document.getElementById('admin-toggle');
+    const loginModal = document.getElementById('login-modal');
+    const adminCodeInput = document.getElementById('admin-code');
+    const loginError = document.getElementById('login-error');
+    const adminPanel = document.getElementById('admin-panel');
+    const gearMenu = document.getElementById('gear-menu');
+    const gearAdminBtn = document.getElementById('gear-admin-btn');
+    const gearDebugBtn = document.getElementById('gear-debug-btn');
+
+    function updateGearMenu(){
+      gearAdminBtn.textContent = isAdmin ? '🔓 Вийти з адмінки' : '🔐 Вхід адміністратора';
+      gearDebugBtn.textContent = debugBarEl.classList.contains('collapsed')
+        ? '🐞 Дебаг-консоль: увімкнути'
+        : '🐞 Дебаг-консоль: вимкнути';
+    }
+
+    adminToggle.addEventListener('click', e => {
+      e.stopPropagation();
+      updateGearMenu();
+      gearMenu.classList.toggle('open');
+    });
+
+    document.addEventListener('click', e => {
+      if (!gearMenu.contains(e.target) && e.target !== adminToggle) {
+        gearMenu.classList.remove('open');
+      }
+    });
+
+    gearAdminBtn.addEventListener('click', () => {
+      gearMenu.classList.remove('open');
+      if (isAdmin) {
+        document.getElementById('logout-btn').click();
+      } else {
+        loginError.textContent = '';
+        adminCodeInput.value = '';
+        loginModal.classList.add('open');
+        adminCodeInput.focus();
+      }
+    });
+
+    gearDebugBtn.addEventListener('click', () => {
+      debugBarEl.classList.toggle('collapsed');
+      gearMenu.classList.remove('open');
+    });
+
+    document.getElementById('cancel-login').addEventListener('click', () => {
+      loginModal.classList.remove('open');
+    });
+
+    document.getElementById('submit-login').addEventListener('click', submitLogin);
+    adminCodeInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitLogin(); });
+
+    function submitLogin(){
+      const code = adminCodeInput.value.trim();
+      if (!code) return;
+      loginError.textContent = 'Перевіряю…';
+      debugLog('Спроба входу: email=' + ADMIN_EMAIL + ', довжина коду=' + code.length);
+
+      const timeout = setTimeout(() => {
+        loginError.textContent = 'Немає відповіді від сервера. Перевір інтернет-з’єднання і спробуй ще раз.';
+        debugLog('Вхід: ТАЙМАУТ — відповіді не було 10 секунд', 'err-line');
+      }, 10000);
+
+      fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + encodeURIComponent(firebaseConfig.apiKey), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: ADMIN_EMAIL, password: code, returnSecureToken: true })
+      })
+        .then(r => r.json())
+        .then(data => {
+          clearTimeout(timeout);
+          if (data.idToken) {
+            idToken = data.idToken;
+            isAdmin = true;
+            debugLog('Вхід успішний', 'ok-line');
+            loginModal.classList.remove('open');
+            adminToggle.classList.add('is-admin');
+            adminToggle.title = 'Ви увійшли як адмін';
+            adminPanel.classList.add('open');
+            fillInputs('cfg', firebaseConfig);
+            document.getElementById('if-title').value = currentSettings.title;
+            document.getElementById('if-eyebrow').value = currentSettings.eyebrow;
+            cleanupOldDates();
+            loadMenu();
+          } else {
+            const msg = (data.error && data.error.message) || 'Невідома помилка';
+            debugLog('Вхід: ПОМИЛКА → ' + msg, 'err-line');
+            loginError.textContent = 'Помилка: ' + msg;
+          }
+        })
+        .catch(err => {
+          clearTimeout(timeout);
+          debugLog('Вхід: мережева помилка → ' + err.message, 'err-line');
+          loginError.textContent = 'Мережева помилка: ' + err.message;
+        });
+    }
+
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      idToken = null;
+      isAdmin = false;
+      adminToggle.classList.remove('is-admin');
+      adminToggle.title = 'Вхід для адміністратора';
+      adminPanel.classList.remove('open');
+      loadMenu();
+    });
+
+    // ---------- вкладки адмін-панелі ----------
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    // ---------- стиснення фото на клієнті ----------
+    function compressImage(file, maxDim, quality){
+      maxDim = maxDim || 800;
+      quality = quality || 0.65;
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const img = new Image();
+          img.onload = () => {
+            let width = img.width, height = img.height;
+            if (width > height) {
+              if (width > maxDim) { height = Math.round(height * (maxDim / width)); width = maxDim; }
+            } else {
+              if (height > maxDim) { width = Math.round(width * (maxDim / height)); height = maxDim; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          };
+          img.onerror = () => reject(new Error('Не вдалося прочитати зображення'));
+          img.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error('Не вдалося прочитати файл'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    const photoInput = document.getElementById('dish-photo');
+    const photoPreview = document.getElementById('photo-preview');
+    const photoMeta = document.getElementById('photo-meta');
+    let compressedPhoto = null;
+
+    photoInput.addEventListener('change', async () => {
+      const file = photoInput.files[0];
+      if (!file) { compressedPhoto = null; photoPreview.style.display = 'none'; photoMeta.textContent = ''; return; }
+      photoMeta.textContent = 'Стискаю фото…';
+      try {
+        compressedPhoto = await compressImage(file);
+        photoPreview.src = compressedPhoto;
+        photoPreview.style.display = 'block';
+        const kb = Math.round((compressedPhoto.length * 0.75) / 1024);
+        photoMeta.textContent = 'Готово, приблизно ' + kb + ' КБ';
+      } catch (err) {
+        photoMeta.textContent = 'Помилка стиснення: ' + err.message;
+        compressedPhoto = null;
+      }
+    });
+
+    const addForm = document.getElementById('add-form');
+    const addStatus = document.getElementById('add-status');
+
+    addForm.addEventListener('submit', e => {
+      e.preventDefault();
+      if (!idToken) { showStatus(addStatus, 'Спочатку увійди як адмін', true); return; }
+      const name = document.getElementById('dish-name').value.trim();
+      const description = document.getElementById('dish-desc').value.trim();
+      const categoryId = document.getElementById('dish-category').value;
+      const date = document.getElementById('dish-date').value || selectedDate;
+      const meal = document.getElementById('dish-meal').value || selectedMeal;
+      if (!name) { showStatus(addStatus, 'Введи назву страви', true); return; }
+      const newDish = {
+        name: name,
+        description: description,
+        categoryId: categoryId || '',
+        photo: compressedPhoto || '',
+        createdAt: Date.now()
+      };
+      fetch(firebaseConfig.databaseURL + '/menu/' + date + '/' + meal + '.json?auth=' + encodeURIComponent(idToken), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newDish)
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) throw new Error(data.error);
+          showStatus(addStatus, (date === selectedDate && meal === selectedMeal)
+            ? 'Страву додано ✓'
+            : 'Страву додано на ' + date + ' ✓', false);
+          addForm.reset();
+          photoPreview.style.display = 'none';
+          photoMeta.textContent = '';
+          compressedPhoto = null;
+          syncAdminDishDefaults();
+          loadMenu();
+        })
+        .catch(err => showStatus(addStatus, 'Помилка: ' + err.message, true));
+    });
+
+    // ---------- вкладка "Категорії" ----------
+    const addCategoryForm = document.getElementById('add-category-form');
+    const categoryStatus = document.getElementById('category-status');
+
+    addCategoryForm.addEventListener('submit', e => {
+      e.preventDefault();
+      if (!idToken) { showStatus(categoryStatus, 'Спочатку увійди як адмін', true); return; }
+      const name = document.getElementById('category-name').value.trim();
+      if (!name) { showStatus(categoryStatus, 'Введи назву розділу', true); return; }
+      fetch(firebaseConfig.databaseURL + '/categories.json?auth=' + encodeURIComponent(idToken), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, order: Date.now() })
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) throw new Error(data.error);
+          showStatus(categoryStatus, 'Розділ додано ✓', false);
+          addCategoryForm.reset();
+          loadMenu();
+        })
+        .catch(err => showStatus(categoryStatus, 'Помилка: ' + err.message, true));
+    });
+
+    // ---------- вкладка "Інтерфейс" ----------
+    const interfaceForm = document.getElementById('interface-form');
+    const interfaceStatus = document.getElementById('interface-status');
+
+    interfaceForm.addEventListener('submit', e => {
+      e.preventDefault();
+      if (!idToken) { showStatus(interfaceStatus, 'Спочатку увійди як адмін', true); return; }
+      const eyebrow = document.getElementById('if-eyebrow').value.trim();
+      const title = document.getElementById('if-title').value.trim();
+      const payload = {
+        title: title || 'Їдальня',
+        eyebrow: eyebrow || 'Сьогоднішнє меню'
+      };
+      fetch(firebaseConfig.databaseURL + '/settings.json?auth=' + encodeURIComponent(idToken), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) throw new Error(data.error);
+          applySettings(payload);
+          showStatus(interfaceStatus, 'Збережено ✓', false);
+        })
+        .catch(err => showStatus(interfaceStatus, 'Помилка: ' + err.message, true));
+    });
+
+    const addLineForm = document.getElementById('add-line-form');
+    const lineStatus = document.getElementById('line-status');
+
+    addLineForm.addEventListener('submit', e => {
+      e.preventDefault();
+      if (!idToken) { showStatus(lineStatus, 'Спочатку увійди як адмін', true); return; }
+      const text = document.getElementById('line-text').value.trim();
+      if (!text) { showStatus(lineStatus, 'Введи текст рядка', true); return; }
+      fetch(firebaseConfig.databaseURL + '/headerLines.json?auth=' + encodeURIComponent(idToken), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text, order: Date.now() })
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) throw new Error(data.error);
+          showStatus(lineStatus, 'Рядок додано ✓', false);
+          addLineForm.reset();
+          loadHeaderLines();
+        })
+        .catch(err => showStatus(lineStatus, 'Помилка: ' + err.message, true));
+    });
+
+    // ---------- вкладка "Налаштування" ----------
+    const settingsForm = document.getElementById('settings-form');
+    const settingsStatus = document.getElementById('settings-status');
+
+    settingsForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const cfg = readConfigFromInputs('cfg');
+      if (!cfg.apiKey || !cfg.databaseURL || !cfg.projectId) {
+        showStatus(settingsStatus, 'Заповни принаймні API Key, Database URL і Project ID', true);
+        return;
+      }
+      localStorage.setItem('dinnerMenuFirebaseConfig', JSON.stringify(cfg));
+      downloadConfiguredFile(cfg);
+      showStatus(settingsStatus, 'Файл завантажено. Онови сторінку (F5), щоб застосувати нове підключення.', false);
+    });
+  }
+</script>
+</body>
+</html>
